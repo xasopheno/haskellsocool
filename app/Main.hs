@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Main where
 
 import Data.Ratio (denominator, numerator)
@@ -67,7 +69,7 @@ instance Normalize PointOp where
   normalize pointOp (Fm r) = applySimpleOp pointOp (Fm r)
   normalize pointOp (Lm r) = applySimpleOp pointOp (Lm r)
 
-instance Normalize SeqOp where
+instance Normalize [PointOp] where
   normalize seqOp op = map helper seqOp
     where
       helper = (`normalize` op)
@@ -78,7 +80,7 @@ op1 =
       lm = 1 / 2
     }
 
-seqOp = SeqOp [op1]
+seqOp = [op1]
 
 normalized = normalize seqOp (Fm 3)
 
