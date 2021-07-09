@@ -13,21 +13,6 @@ data PointOp = PointOp
 
 data Op = Fm Rational | Lm Rational
 
-class Normalize a where
-  normalize :: a -> Op -> a
-
-instance Normalize PointOp where
-  normalize pointOp (Fm r) = applySimpleOp pointOp (Fm r)
-  normalize pointOp (Lm r) = applySimpleOp pointOp (Lm r)
-
-op1 =
-  PointOp
-    { fm = 1,
-      lm = 1 / 2
-    }
-
-normalized = normalize op1 (Fm 3)
-
 applySimpleOp :: PointOp -> Op -> PointOp
 applySimpleOp pointOp (Fm r) = fmPointOp pointOp r
 applySimpleOp pointOp (Lm r) = lmPointOp pointOp r
@@ -75,5 +60,41 @@ seqnormalform = [op]
 
 result = fmSeqNormalForm seqnormalform 2
 
+class Normalize a where
+  normalize :: a -> Op -> a
+
+instance Normalize PointOp where
+  normalize pointOp (Fm r) = applySimpleOp pointOp (Fm r)
+  normalize pointOp (Lm r) = applySimpleOp pointOp (Lm r)
+
+instance Normalize SeqOp where
+  normalize seqOp op = map helper seqOp
+    where
+      helper = (`normalize` op)
+
+op1 =
+  PointOp
+    { fm = 1,
+      lm = 1 / 2
+    }
+
+seqOp = SeqOp [op1]
+
+normalized = normalize seqOp (Fm 3)
+
 main :: IO ()
 main = print normalized
+
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
