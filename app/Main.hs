@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module Main where
 
 import Data.Ratio (denominator, numerator)
@@ -8,18 +6,26 @@ data PointOp = PointOp
   { fm :: Rational,
     fa :: Rational,
     lm :: Rational,
-    gm :: Rational
-    -- pm :: Rational,
-    -- pa :: Rational,
+    gm :: Rational,
+    pm :: Rational,
+    pa :: Rational
   }
 
-data Op = Fm Rational | Fa Rational | Lm Rational | Gm Rational
+newtype NormalForm = NormalForm [SeqOp]
 
-applySimpleOp :: PointOp -> Op -> PointOp
-applySimpleOp op (Fm r) = fmOp op r
-applySimpleOp op (Fa r) = faOp op r
-applySimpleOp op (Lm r) = lmOp op r
-applySimpleOp op (Gm r) = gmOp op r
+newtype SeqOp = SeqOp [PointOp]
+
+data Op
+  = Fm Rational
+  | Fa Rational
+  | Lm Rational
+  | Gm Rational
+  | Pm Rational
+  | Pa Rational
+
+class Normalize a where
+  new :: a
+  normalize :: a -> Op -> a
 
 fmOp :: PointOp -> Rational -> PointOp
 fmOp inputOp m =
@@ -45,14 +51,22 @@ gmOp op m =
     { gm = gm op * m
     }
 
+pmOp :: PointOp -> Rational -> PointOp
+pmOp op m =
+  op
+    { pm = pm op * m
+    }
+
+paOp :: PointOp -> Rational -> PointOp
+paOp op m =
+  op
+    { pa = pa op * m
+    }
+
 instance Show PointOp where
   show op = "Fm " ++ showRational (fm op) ++ " | Lm " ++ showRational (lm op)
     where
       showRational r = show (numerator r) ++ "/" ++ show (denominator r)
-
-newtype NormalForm = NormalForm [SeqOp]
-
-newtype SeqOp = SeqOp [PointOp]
 
 instance Show NormalForm where
   show (NormalForm seqs) = "Overlay " ++ show seqs
@@ -60,16 +74,22 @@ instance Show NormalForm where
 instance Show SeqOp where
   show (SeqOp pointops) = "Seq " ++ show pointops
 
-class Normalize a where
-  new :: a
-  normalize :: a -> Op -> a
-
 instance Normalize PointOp where
-  new = PointOp {fm = 1, fa = 0, lm = 1, gm = 1}
-  normalize pointOp (Fm r) = applySimpleOp pointOp (Fm r)
-  normalize pointOp (Fa r) = applySimpleOp pointOp (Fa r)
-  normalize pointOp (Lm r) = applySimpleOp pointOp (Lm r)
-  normalize pointOp (Gm r) = applySimpleOp pointOp (Gm r)
+  new =
+    PointOp
+      { fm = 1,
+        fa = 0,
+        lm = 1,
+        gm = 1,
+        pm = 1,
+        pa = 0
+      }
+  normalize pointOp (Fm r) = fmOp pointOp r
+  normalize pointOp (Fa r) = faOp pointOp r
+  normalize pointOp (Lm r) = lmOp pointOp r
+  normalize pointOp (Gm r) = gmOp pointOp r
+  normalize pointOp (Pm r) = pmOp pointOp r
+  normalize pointOp (Pa r) = paOp pointOp r
 
 instance Normalize SeqOp where
   new = SeqOp [new :: PointOp]
@@ -82,14 +102,6 @@ instance Normalize NormalForm where
   normalize (NormalForm seqOp) op = NormalForm result
     where
       result = map (`normalize` op) seqOp
-
-op =
-  PointOp
-    { fm = 1,
-      fa = 1,
-      lm = 1,
-      gm = 1
-    }
 
 normalform = new :: NormalForm
 
