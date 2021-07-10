@@ -15,17 +15,18 @@ newtype NormalForm = NormalForm [SeqOp]
 
 newtype SeqOp = SeqOp [PointOp]
 
-data Op
+data Op a
   = Fm Rational
   | Fa Rational
   | Lm Rational
   | Gm Rational
   | Pm Rational
   | Pa Rational
+  | Seq [a]
 
 class Normalize a where
   new :: a
-  normalize :: a -> Op -> a
+  normalize :: a -> Op a -> a
 
 fmOp :: PointOp -> Rational -> PointOp
 fmOp inputOp m =
@@ -74,6 +75,8 @@ instance Show NormalForm where
 instance Show SeqOp where
   show (SeqOp pointops) = "Seq " ++ show pointops
 
+join a b = [a, b]
+
 instance Normalize PointOp where
   new =
     PointOp
@@ -84,28 +87,31 @@ instance Normalize PointOp where
         pm = 1,
         pa = 0
       }
-  normalize pointOp (Fm r) = fmOp pointOp r
-  normalize pointOp (Fa r) = faOp pointOp r
-  normalize pointOp (Lm r) = lmOp pointOp r
-  normalize pointOp (Gm r) = gmOp pointOp r
-  normalize pointOp (Pm r) = pmOp pointOp r
-  normalize pointOp (Pa r) = paOp pointOp r
+
+  normalize input (Fm r) = fmOp input r
+  normalize input (Fa r) = faOp input r
+  normalize input (Lm r) = lmOp input r
+  normalize input (Gm r) = gmOp input r
+  normalize input (Pm r) = pmOp input r
+  normalize input (Pa r) = paOp input r
+  normalize input (Seq []) = join input ops
+  normalize input (Seq [ops]) = join input ops
 
 instance Normalize SeqOp where
-  new = SeqOp [new :: PointOp]
-  normalize (SeqOp ops) op = SeqOp result
+  new = SeqOp [new :: PointOp, new :: PointOp]
+  normalize (SeqOp input) op = SeqOp result
     where
-      result = map (`normalize` op) ops
+      result = map (`normalize` op) input
 
 instance Normalize NormalForm where
-  new = NormalForm [new :: SeqOp]
-  normalize (NormalForm seqOp) op = NormalForm result
+  new = NormalForm [new :: SeqOp, new :: SeqOp]
+  normalize (NormalForm input) op = NormalForm result
     where
-      result = map (`normalize` op) seqOp
+      result = map (`normalize` op) input
 
 normalform = new :: NormalForm
 
-normalized = normalize normalform (Fm 2)
+normalized = normalize normalform Seq (normalform)
 
 main :: IO ()
 main = print normalized
