@@ -1,0 +1,6 @@
+name: haskellsocool
+executables:
+  main:
+    main: Main.hs
+    source-dirs: app
+    dependencies: [base]

@@ -1,5 +1,6 @@
 module Main where
 
+import Data.List (intercalate)
 import Data.Ratio (denominator, numerator)
 
 data PointOp = PointOp
@@ -10,10 +11,13 @@ data PointOp = PointOp
     pm :: Rational,
     pa :: Rational
   }
+  deriving (Show)
 
 newtype NormalForm = NormalForm [SeqOp]
+  deriving (Show)
 
 newtype SeqOp = SeqOp [PointOp]
+  deriving (Show)
 
 data Op
   = Fm Rational
@@ -23,103 +27,73 @@ data Op
   | Pm Rational
   | Pa Rational
 
-class Normalize a where
-  new :: a
-  normalize :: a -> Op -> a
+class Display a where
+  toString :: a -> String
 
-fmOp :: PointOp -> Rational -> PointOp
-fmOp inputOp m =
-  inputOp
-    { fm = fm inputOp * m
-    }
-
-faOp :: PointOp -> Rational -> PointOp
-faOp op m =
-  op
-    { fa = fa op + m
-    }
-
-lmOp :: PointOp -> Rational -> PointOp
-lmOp op m =
-  op
-    { lm = lm op * m
-    }
-
-gmOp :: PointOp -> Rational -> PointOp
-gmOp op m =
-  op
-    { gm = gm op * m
-    }
-
-pmOp :: PointOp -> Rational -> PointOp
-pmOp op m =
-  op
-    { pm = pm op * m
-    }
-
-paOp :: PointOp -> Rational -> PointOp
-paOp op m =
-  op
-    { pa = pa op * m
-    }
-
-instance Show PointOp where
-  show op = "Fm " ++ showRational (fm op) ++ " | Lm " ++ showRational (lm op)
+instance Display PointOp where
+  toString op = "Fm " ++ showRational (fm op) ++ ", Lm " ++ showRational (lm op)
     where
       showRational r = show (numerator r) ++ "/" ++ show (denominator r)
 
-instance Show NormalForm where
-  show (NormalForm seqs) = "Overlay " ++ show seqs
+instance Display NormalForm where
+  toString (NormalForm seqs) = "Overlay " ++ toString seqs
 
-instance Show SeqOp where
-  show (SeqOp pointops) = "Seq " ++ show pointops
+instance Display SeqOp where
+  toString (SeqOp pointops) = "Seq " ++ toString pointops
 
-instance Normalize PointOp where
-  new =
-    PointOp
-      { fm = 1,
-        fa = 0,
-        lm = 1,
-        gm = 1,
-        pm = 1,
-        pa = 0
+instance Display a => Display [a] where
+  toString list = "[" ++ intercalate ", " (map toString list) ++ "]"
+
+normalizePointOp :: Op -> PointOp -> PointOp
+normalizePointOp op pointOp = case op of
+  Fm r ->
+    pointOp
+      { fm = fm pointOp * r
       }
-  normalize pointOp (Fm r) = fmOp pointOp r
-  normalize pointOp (Fa r) = faOp pointOp r
-  normalize pointOp (Lm r) = lmOp pointOp r
-  normalize pointOp (Gm r) = gmOp pointOp r
-  normalize pointOp (Pm r) = pmOp pointOp r
-  normalize pointOp (Pa r) = paOp pointOp r
+  Fa r ->
+    pointOp
+      { fa = fa pointOp * r
+      }
+  Gm r ->
+    pointOp
+      { gm = gm pointOp * r
+      }
+  Lm r ->
+    pointOp
+      { lm = lm pointOp * r
+      }
+  Pm r ->
+    pointOp
+      { pm = pm pointOp * r
+      }
+  Pa r ->
+    pointOp
+      { pa = pa pointOp * r
+      }
 
-instance Normalize SeqOp where
-  new = SeqOp [new :: PointOp]
-  normalize (SeqOp ops) op = SeqOp result
-    where
-      result = map (`normalize` op) ops
+normalize :: NormalForm -> Op -> NormalForm
+normalize (NormalForm normalform) op =
+  NormalForm
+    ( map (\(SeqOp x) -> SeqOp (map (normalizePointOp op) x)) normalform
+    )
 
-instance Normalize NormalForm where
-  new = NormalForm [new :: SeqOp]
-  normalize (NormalForm seqOp) op = NormalForm result
-    where
-      result = map (`normalize` op) seqOp
-
-normalform = new :: NormalForm
+normalform =
+  NormalForm
+    [ SeqOp
+        [ PointOp
+            { fm = 1,
+              fa = 0,
+              lm = 1,
+              gm = 1,
+              pm = 1,
+              pa = 0
+            }
+        ]
+    ]
 
 normalized = normalize normalform (Fm 2)
 
 main :: IO ()
-main = print normalized
-
---
---
---
---
---
---
---
---
---
---
---
---
---
+main = do
+  putStrLn $ toString normalized
+  print normalized
